@@ -223,6 +223,8 @@ int main(int argc,char *argv[])
 #token STRUCT       "STRUCT"
 #token ENDSTRUCT    "ENDSTRUCT"
 #token WRITELN      "WRITELN"
+#token ARRAY        "ARRAY"
+#token OF           "OF"
 
 #token PLUS         "\+"
 #token MINUS        "\-"
@@ -237,6 +239,8 @@ int main(int argc,char *argv[])
 
 #token OPENPAR      "\("
 #token CLOSEPAR     "\)"
+#token OPENSQUAB    "\["
+#token CLOSESQUAB   "\]"
 #token ASIG         ":="
 #token DOT          "."
 
@@ -249,6 +253,7 @@ int main(int argc,char *argv[])
 #token WHILE        "WHILE"
 #token DO           "DO"
 #token ENDWHILE     "ENDWHILE"
+
 
 #token IDENT        "[a-zA-Z][a-zA-Z0-9]*"
 #token INTCONST     "[0-9]+"
@@ -278,7 +283,7 @@ l_dec_blocs: ( dec_bloc )* <<#0=createASTlist(_sibling);>> ;
 
 // procedure or funcbloc
 dec_bloc: proc_bloc | func_bloc; 
-// proc bloc : declration, variables, more blocs, instructions
+// proc bloc : declration, definition 
 proc_bloc:PROCEDURE^ proc_dec proc_def ENDPROCEDURE!;
 // proc declration : name and parameters
 proc_dec: IDENT^ proc_l_params;
@@ -295,13 +300,13 @@ func_bloc:FUNCTION^ func_dec func_def ENDFUNCTION!<</*needs modification*/ >>;
 // func declaration (method signature):name & parameters and return type
 func_dec: IDENT^ proc_l_params RETURN! constr_type;
 // function definition ?
-func_def: RETURN! expression;
-
+func_def: dec_vars l_instrs RETURN! expression;
+// keep contruction types as primitive or complex
 constr_type: prim_type | complex_type;
 
 prim_type : INT | BOOL;
-
-complex_type: STRUCT^ (field)* ENDSTRUCT!;
+// a complex type is a struct or an Array [ int ] of type
+complex_type: STRUCT^ (field)* ENDSTRUCT! | ARRAY^ OPENSQUAB! INTCONST CLOSESQUAB! OF! constr_type;
 
 field: IDENT^ constr_type;
 
@@ -311,7 +316,7 @@ l_instrs: (instruction)* <<#0=createASTlist(_sibling);>>;
 // 1. assignment p:=3
 // 2. function call   a) p() b) p(2)  c) p(r()) 
 // 3. if instruction ; while instruction
-instruction: IDENT (DOT^ IDENT)* ( ASIG^ expression | OPENPAR^ instrParams) | WRITELN^ OPENPAR! ( expression | STRING ) CLOSEPAR! | if_instruction | while_instruction;
+instruction: IDENT (DOT^ IDENT | OPENSQUAB^ expression CLOSESQUAB^  )* ( ASIG^ expression | OPENPAR^ instrParams) | WRITELN^ OPENPAR! ( expression | STRING ) CLOSEPAR! | if_instruction | while_instruction;
 instrParams: (expression (COMMA! expression)* | ) CLOSEPAR! <<#0=createASTlist(_sibling);>>; 
 instrWriteln: WRITELN^ OPENPAR! ( expression | STRING ) CLOSEPAR!;
 
@@ -353,4 +358,4 @@ expr_plus_sub: expr_mult_div ( (PLUS^ | MINUS^ ) expr_mult_div)*;
 expr_mult_div: not_negative ( ( MULTIPLY^ |  DIVIDE^ ) not_negative)*;
 not_negative: (NOT^ not_negative | NEGATIVE^ not_negative | expsimple);
 
-expsimple:  IDENT^ (DOT^ IDENT | OPENPAR^ instrParams)* | INTCONST | OPENPAR! expression CLOSEPAR! | BOOL_TRUE  ;
+expsimple:  IDENT^ (DOT^ IDENT | OPENPAR^ instrParams | OPENSQUAB^ expression CLOSESQUAB^ )* | INTCONST | OPENPAR! expression CLOSEPAR! | BOOL_TRUE  ;
