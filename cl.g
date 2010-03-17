@@ -316,7 +316,7 @@ l_instrs: (instruction)* <<#0=createASTlist(_sibling);>>;
 // 1. assignment p:=3
 // 2. function call   a) p() b) p(2)  c) p(r()) 
 // 3. if instruction ; while instruction
-instruction: IDENT (DOT^ IDENT | OPENSQUAB^ expression CLOSESQUAB^  )* ( ASIG^ expression | OPENPAR^ instrParams) | WRITELN^ OPENPAR! ( expression | STRING ) CLOSEPAR! | if_instruction | while_instruction;
+instruction: IDENT (DOT^ IDENT | OPENSQUAB^ expression CLOSESQUAB^  )* ( ASIG^ expression | OPENPAR^ instrParams) | instrWriteln | if_instruction | while_instruction;
 instrParams: (expression (COMMA! expression)* | ) CLOSEPAR! <<#0=createASTlist(_sibling);>>; 
 instrWriteln: WRITELN^ OPENPAR! ( expression | STRING ) CLOSEPAR!;
 
