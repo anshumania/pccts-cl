@@ -55,6 +55,14 @@ void zzcr_attr(Attrib *attr,int type,char *text)
     attr->kind="intconst";
     attr->text=text;
     break;
+ // string token - update semantic.cc
+  case STRING:
+    //debug
+    //cout<< " found a token of type STRING " << text << endl ;
+    attr->kind="string";
+    attr->text = text;
+    break;
+    
   default:
     attr->kind=lowercase(text);
     attr->text="";
@@ -217,6 +225,7 @@ int main(int argc,char *argv[])
 
 #token BOOL         "BOOL"
 #token BOOL_TRUE    "true"
+#token BOOL_FALSE   "false"
 #token VAL          "VAL"
 #token REF          "REF"
 
@@ -253,10 +262,12 @@ int main(int argc,char *argv[])
 #token WHILE        "WHILE"
 #token DO           "DO"
 #token ENDWHILE     "ENDWHILE"
-
+#token READ         "READ"
+#token WRITE        "WRITE"
 
 #token IDENT        "[a-zA-Z][a-zA-Z0-9]*"
 #token INTCONST     "[0-9]+"
+#token STRING       " \" ~[\"]* \" "
 #token COMMENT      "//~[\n]*" << printf("%s",zzlextext); zzskip(); >>
 #token WHITESPACE   "[\ \t]+"  << printf("%s",zzlextext); zzskip(); >>
 #token NEWLINE      "\n"       << zzline++; printf("\n%3d: ", zzline); zzskip(); >>
@@ -300,7 +311,7 @@ func_bloc:FUNCTION^ func_dec func_def ENDFUNCTION!<</*needs modification*/ >>;
 // func declaration (method signature):name & parameters and return type
 func_dec: IDENT^ proc_l_params RETURN! constr_type;
 // function definition ?
-func_def: dec_vars l_instrs RETURN! expression;
+func_def: dec_vars l_dec_blocs l_instrs RETURN! expression;
 // keep contruction types as primitive or complex
 constr_type: prim_type | complex_type;
 
@@ -316,9 +327,11 @@ l_instrs: (instruction)* <<#0=createASTlist(_sibling);>>;
 // 1. assignment p:=3
 // 2. function call   a) p() b) p(2)  c) p(r()) 
 // 3. if instruction ; while instruction
-instruction: IDENT (DOT^ IDENT | OPENSQUAB^ expression CLOSESQUAB^  )* ( ASIG^ expression | OPENPAR^ instrParams) | instrWriteln | if_instruction | while_instruction;
+instruction: IDENT (DOT^ IDENT | OPENSQUAB^ expression CLOSESQUAB!  )* ( ASIG^ expression | OPENPAR^ instrParams) | instrWriteln | if_instruction | while_instruction | instrRead | instrWrite ;
 instrParams: (expression (COMMA! expression)* | ) CLOSEPAR! <<#0=createASTlist(_sibling);>>; 
 instrWriteln: WRITELN^ OPENPAR! ( expression | STRING ) CLOSEPAR!;
+instrRead : READ^ OPENPAR! IDENT CLOSEPAR!;
+instrWrite : WRITE^ OPENPAR! ( expression | STRING ) CLOSEPAR !;
 
 // if instruction : if expression then instructions else instructions
 if_instruction: IF^ expression THEN! l_instrs (ELSE! l_instrs | ) ENDIF!;
@@ -358,4 +371,4 @@ expr_plus_sub: expr_mult_div ( (PLUS^ | MINUS^ ) expr_mult_div)*;
 expr_mult_div: not_negative ( ( MULTIPLY^ |  DIVIDE^ ) not_negative)*;
 not_negative: (NOT^ not_negative | NEGATIVE^ not_negative | expsimple);
 
-expsimple:  IDENT^ (DOT^ IDENT | OPENPAR^ instrParams | OPENSQUAB^ expression CLOSESQUAB^ )* | INTCONST | OPENPAR! expression CLOSEPAR! | BOOL_TRUE  ;
+expsimple:  IDENT^ (DOT^ IDENT | OPENPAR^ instrParams | OPENSQUAB^ expression CLOSESQUAB! )* | INTCONST | OPENPAR! expression CLOSEPAR! | BOOL_TRUE | BOOL_FALSE  ;
